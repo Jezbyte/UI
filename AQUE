@@ -1,0 +1,373 @@
+-- [[ AQUE UI LIBRARY - MOBILE EXECUTOR EDITION ]]
+-- Framework para sa pagbuo ng sarili mong Script Hub
+
+local AQUE = {}
+
+-- I-delete ang lumang UI kung may kaparehong pangalan para maiwasan ang overlap
+if game:GetService("CoreGui"):FindFirstChild("AQUE_UI_Framework") then
+    game:GetService("CoreGui")["AQUE_UI_Framework"]:Destroy()
+end
+
+-- internal utilities
+local function makeDraggable(frame, dragHandle)
+    local UserInputService = game:GetService("UserInputService")
+    local dragging, dragInput, dragStart, startPos
+
+    dragHandle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+local function addCorner(parent, r)
+    local c = Instance.new("UICorner") c.CornerRadius = UDim.new(0, r or 10) c.Parent = parent
+end
+
+local function addStroke(parent, color, trans)
+    local s = Instance.new("UIStroke") 
+    s.Color = color or Color3.fromRGB(255,255,255) 
+    s.Transparency = trans or 0.8 
+    s.Parent = parent
+end
+
+-- [[ MAIN FUNCTION: CREATE WINDOW ]]
+function AQUE:CreateWindow(config)
+    -- Default Configurations kung walang ipinasang values
+    local Config = config or {}
+    local HubName = Config.Name or "AQUE HUB"
+    local LogoID = Config.LogoID or "rbxassetid://0" -- Palitan ng iyong custom Image ID
+    local SizeX = Config.SizeX or 340
+    local SizeY = Config.SizeY or 240
+    
+    -- Colors / Themes
+    local Theme = {
+        BgColor = Config.BgColor or Color3.fromRGB(15, 23, 42),
+        Trans = Config.Transparency or 0.35,
+        Accent = Config.AccentColor or Color3.fromRGB(56, 189, 248),
+        Text = Config.TextColor or Color3.fromRGB(248, 250, 252),
+        TextMuted = Config.TextMutedColor or Color3.fromRGB(148, 163, 184)
+    }
+
+    -- Base GUI Setup
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "AQUE_UI_Framework"
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    ScreenGui.Parent = game:GetService("CoreGui")
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainContainer"
+    MainFrame.Size = UDim2.new(0, SizeX, 0, SizeY)
+    MainFrame.Position = UDim2.new(0.5, -(SizeX/2), 0.4, -(SizeY/2))
+    MainFrame.BackgroundTransparency = 1 
+    MainFrame.Parent = ScreenGui
+
+    -- Topbar Component
+    local Topbar = Instance.new("Frame")
+    Topbar.Name = "Topbar"
+    Topbar.Size = UDim2.new(1, 0, 0, 42)
+    Topbar.BackgroundColor3 = Theme.BgColor
+    Topbar.BackgroundTransparency = Theme.Trans
+    Topbar.ZIndex = 5
+    Topbar.Parent = MainFrame
+    addCorner(Topbar, 10)
+    addStroke(Topbar, Color3.fromRGB(255,255,255), 0.8)
+    makeDraggable(MainFrame, Topbar)
+
+    -- Logo Customization (Maaaring Image o Circle Color fill)
+    local LogoIcon = Instance.new("ImageButton")
+    LogoIcon.Size = UDim2.new(0, 22, 0, 22)
+    LogoIcon.Position = UDim2.new(0, 10, 0.5, -11)
+    LogoIcon.ZIndex = 6
+    LogoIcon.Parent = Topbar
+    addCorner(LogoIcon, 11)
+
+    if LogoID ~= "rbxassetid://0" then
+        LogoIcon.Image = LogoID
+        LogoIcon.BackgroundTransparency = 1
+    else
+        LogoIcon.BackgroundColor3 = Theme.Accent -- Gagamit ng solid accent color kung walang image id
+    end
+
+    -- Hub Text Label
+    local LogoText = Instance.new("TextLabel")
+    LogoText.Size = UDim2.new(1, -50, 1, 0)
+    LogoText.Position = UDim2.new(0, 38, 0, 0)
+    LogoText.BackgroundTransparency = 1
+    LogoText.Text = HubName
+    LogoText.TextColor3 = Theme.Text
+    LogoText.Font = Enum.Font.GothamBold
+    LogoText.TextSize = 14
+    LogoText.TextXAlignment = Enum.TextXAlignment.Left
+    LogoText.ZIndex = 6
+    LogoText.Parent = Topbar
+
+    -- Main Content Body
+    local MainBody = Instance.new("Frame")
+    MainBody.Name = "MainBody"
+    MainBody.Size = UDim2.new(1, 0, 1, -48)
+    MainBody.Position = UDim2.new(0, 0, 0, 48) 
+    MainBody.BackgroundColor3 = Theme.BgColor
+    MainBody.BackgroundTransparency = Theme.Trans
+    MainBody.ClipsDescendants = true
+    MainBody.ZIndex = 1
+    MainBody.Parent = MainFrame
+    addCorner(MainBody, 12)
+    addStroke(MainBody, Color3.fromRGB(255,255,255), 0.8)
+
+    -- Content Internal Area
+    local ContentArea = Instance.new("Frame")
+    ContentArea.Size = UDim2.new(1, -20, 1, -15)
+    ContentArea.Position = UDim2.new(0, 10, 0, 10)
+    ContentArea.BackgroundTransparency = 1
+    ContentArea.ZIndex = 2
+    ContentArea.Parent = MainBody
+
+    -- Tabs Header System
+    local TabHeader = Instance.new("Frame")
+    TabHeader.Size = UDim2.new(1, 0, 0, 30)
+    TabHeader.BackgroundTransparency = 1
+    TabHeader.ZIndex = 2
+    TabHeader.Parent = ContentArea
+
+    local TabListLayout = Instance.new("UIListLayout")
+    TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabListLayout.Padding = UDim.new(0, 8)
+    TabListLayout.Parent = TabHeader
+
+    local PageContainer = Instance.new("Frame")
+    PageContainer.Size = UDim2.new(1, 0, 1, -35)
+    PageContainer.Position = UDim2.new(0, 0, 0, 35)
+    PageContainer.BackgroundTransparency = 1
+    PageContainer.ZIndex = 2
+    PageContainer.Parent = ContentArea
+
+    -- [[ LOGO TOGGLE ON/OFF FUNCTIONALITY ]]
+    local uiVisible = true 
+    LogoIcon.MouseButton1Click:Connect(function()
+        uiVisible = not uiVisible
+        if uiVisible then
+            if LogoID == "rbxassetid://0" then LogoIcon.BackgroundColor3 = Theme.Accent end
+            MainBody.Visible = true 
+        else
+            if LogoID == "rbxassetid://0" then LogoIcon.BackgroundColor3 = Color3.fromRGB(75, 85, 99) end
+            MainBody.Visible = false 
+        end
+    end)
+
+    -- [[ LIBRARY METHOD: CREATE TAB ]]
+    local Library = {Tabs = {}, FirstTab = nil}
+    
+    function Library:CreateTab(tabName)
+        local Page = Instance.new("ScrollingFrame")
+        Page.Name = tabName .. "_Page"
+        Page.Size = UDim2.new(1, 0, 1, 0)
+        Page.BackgroundTransparency = 1
+        Page.ScrollBarThickness = 2
+        Page.ScrollBarImageColor3 = Theme.Accent
+        Page.Visible = false
+        Page.ZIndex = 2
+        Page.CanvasSize = UDim2.new(0, 0, 0, 0) -- Dynamic scrolling area
+        Page.Parent = PageContainer
+
+        local PageLayout = Instance.new("UIListLayout")
+        PageLayout.Padding = UDim.new(0, 6)
+        PageLayout.Parent = Page
+
+        PageLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            Page.CanvasSize = UDim2.new(0, 0, 0, PageLayout.AbsoluteContentSize.Y + 10)
+        end)
+
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Size = UDim2.new(0, 75, 1, 0)
+        TabBtn.BackgroundTransparency = 1
+        TabBtn.Text = tabName
+        TabBtn.TextColor3 = Theme.TextMuted
+        TabBtn.Font = Enum.Font.GothamMedium
+        TabBtn.TextSize = 12
+        TabBtn.ZIndex = 3
+        TabBtn.Parent = TabHeader
+        addCorner(TabBtn, 6)
+
+        -- Tab click switching logic
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, p in ipairs(PageContainer:GetChildren()) do
+                if p:IsA("ScrollingFrame") then p.Visible = false end
+            end
+            for _, b in ipairs(TabHeader:GetChildren()) do
+                if b:IsA("TextButton") then 
+                    b.BackgroundTransparency = 1 
+                    b.TextColor3 = Theme.TextMuted
+                end
+            end
+            Page.Visible = true
+            TabBtn.BackgroundTransparency = 0.8
+            TabBtn.BackgroundColor3 = Theme.Accent
+            TabBtn.TextColor3 = Theme.Text
+        end)
+
+        -- I-set ang unang tab bilang active default
+        if not Library.FirstTab then
+            Library.FirstTab = TabBtn
+            Page.Visible = true
+            TabBtn.BackgroundTransparency = 0.8
+            TabBtn.BackgroundColor3 = Theme.Accent
+            TabBtn.TextColor3 = Theme.Text
+        end
+
+        local Elements = {}
+
+        -- [[ TAB METHOD: CREATE TOGGLE ]]
+        function Elements:CreateToggle(toggleName, default, callback)
+            local toggleState = default or false
+            
+            local ToggleFrame = Instance.new("Frame")
+            ToggleFrame.Size = UDim2.new(1, -5, 0, 32)
+            ToggleFrame.BackgroundTransparency = 1
+            ToggleFrame.ZIndex = 3
+            ToggleFrame.Parent = Page
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(0, 150, 1, 0)
+            Label.Position = UDim2.new(0, 5, 0, 0)
+            Label.BackgroundTransparency = 1
+            Label.Text = toggleName
+            Label.TextColor3 = toggleState and Theme.Accent or Theme.Text
+            Label.Font = Enum.Font.Gotham
+            Label.TextSize = 13
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.ZIndex = 3
+            Label.Parent = ToggleFrame
+
+            local Btn = Instance.new("TextButton")
+            Btn.Size = UDim2.new(0, 42, 0, 20)
+            Btn.Position = UDim2.new(1, -48, 0.5, -10)
+            Btn.BackgroundColor3 = toggleState and Theme.Accent or Color3.fromRGB(45, 55, 72)
+            Btn.Text = ""
+            Btn.ZIndex = 3
+            Btn.Parent = ToggleFrame
+            addCorner(Btn, 10)
+
+            local Slider = Instance.new("Frame")
+            Slider.Size = UDim2.new(0, 14, 0, 14)
+            Slider.Position = toggleState and UDim2.new(0, 25, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+            Slider.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            Slider.ZIndex = 4
+            Slider.Parent = Btn
+            addCorner(Slider, 7)
+
+            Btn.MouseButton1Click:Connect(function()
+                toggleState = not toggleState
+                if toggleState then
+                    Slider:TweenPosition(UDim2.new(0, 25, 0.5, -7), "Out", "Quad", 0.15, true)
+                    Btn.BackgroundColor3 = Theme.Accent
+                    Label.TextColor3 = Theme.Accent
+                else
+                    Slider:TweenPosition(UDim2.new(0, 3, 0.5, -7), "Out", "Quad", 0.15, true)
+                    Btn.BackgroundColor3 = Color3.fromRGB(45, 55, 72)
+                    Label.TextColor3 = Theme.Text
+                end
+                pcall(callback, toggleState)
+            end)
+        end
+
+        -- [[ TAB METHOD: CREATE DROPDOWN ]]
+        function Elements:CreateDropdown(dropdownName, items, callback)
+            local DropdownFrame = Instance.new("Frame")
+            DropdownFrame.Size = UDim2.new(1, -5, 0, 32)
+            DropdownFrame.BackgroundTransparency = 1
+            DropdownFrame.ZIndex = 10
+            DropdownFrame.Parent = Page
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(0, 100, 1, 0)
+            Label.Position = UDim2.new(0, 5, 0, 0)
+            Label.BackgroundTransparency = 1
+            Label.Text = dropdownName
+            Label.TextColor3 = Theme.Text
+            Label.Font = Enum.Font.Gotham
+            Label.TextSize = 13
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.ZIndex = 10
+            Label.Parent = DropdownFrame
+
+            local DropdownBtn = Instance.new("TextButton")
+            DropdownBtn.Size = UDim2.new(0, 140, 0, 26)
+            DropdownBtn.Position = UDim2.new(1, -145, 0.5, -13)
+            DropdownBtn.BackgroundColor3 = Theme.BgColor
+            DropdownBtn.BackgroundTransparency = 0.4
+            DropdownBtn.Text = "Select... ▼"
+            DropdownBtn.TextColor3 = Theme.TextMuted
+            DropdownBtn.Font = Enum.Font.GothamMedium
+            DropdownBtn.TextSize = 11
+            DropdownBtn.ZIndex = 10
+            DropdownBtn.Parent = DropdownFrame
+            addCorner(DropdownBtn, 6)
+            addStroke(DropdownBtn, Color3.fromRGB(255,255,255), 0.8)
+
+            local ScrollMenu = Instance.new("ScrollingFrame")
+            ScrollMenu.Size = UDim2.new(0, 140, 0, 52)
+            ScrollMenu.Position = UDim2.new(1, -145, 0.5, 16)
+            ScrollMenu.BackgroundColor3 = Color3.fromRGB(20, 28, 48)
+            ScrollMenu.Visible = false
+            ScrollMenu.ScrollBarThickness = 2
+            ScrollMenu.ScrollBarImageColor3 = Theme.Accent
+            ScrollMenu.ZIndex = 15
+            ScrollMenu.Parent = DropdownFrame
+            addCorner(ScrollMenu, 6)
+
+            local DropdownLayout = Instance.new("UIListLayout")
+            DropdownLayout.Parent = ScrollMenu
+
+            ScrollMenu.CanvasSize = UDim2.new(0, 0, 0, #items * 24)
+
+            for _, itemName in ipairs(items) do
+                local Item = Instance.new("TextButton")
+                Item.Size = UDim2.new(1, 0, 0, 24)
+                Item.BackgroundTransparency = 1
+                Item.Text = "  " .. tostring(itemName)
+                Item.TextColor3 = Theme.Text
+                Item.TextSize = 11
+                Item.Font = Enum.Font.Gotham
+                Item.TextXAlignment = Enum.TextXAlignment.Left
+                Item.ZIndex = 16
+                Item.Parent = ScrollMenu
+                
+                Item.MouseButton1Click:Connect(function()
+                    DropdownBtn.Text = tostring(itemName) .. " ▼"
+                    DropdownBtn.TextColor3 = Theme.Text
+                    ScrollMenu.Visible = false
+                    pcall(callback, itemName)
+                end)
+            end
+
+            DropdownBtn.MouseButton1Click:Connect(function()
+                ScrollMenu.Visible = not ScrollMenu.Visible
+            end)
+        end
+
+        return Elements
+    end
+
+    return Library
+end
+
+return AQUE
