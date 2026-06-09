@@ -47,6 +47,7 @@ local function addStroke(parent, color, trans)
     s.Color = color or Color3.fromRGB(255,255,255) 
     s.Transparency = trans or 0.8 
     s.Parent = parent
+    return s -- Ibinabalik para mabago ang kulay dynamic (para sa focus effect)
 end
 
 -- [[ MAIN FUNCTION: CREATE WINDOW ]]
@@ -361,6 +362,57 @@ function AQUE:CreateWindow(config)
 
             DropdownBtn.MouseButton1Click:Connect(function()
                 ScrollMenu.Visible = not ScrollMenu.Visible
+            end)
+        end
+
+        -- [[ TAB METHOD: CREATE PROMPT BOX (TEXTBOX) ]]
+        function Elements:CreatePromptBox(promptName, placeholder, callback)
+            local PromptFrame = Instance.new("Frame")
+            PromptFrame.Size = UDim2.new(1, -5, 0, 32)
+            PromptFrame.BackgroundTransparency = 1
+            PromptFrame.ZIndex = 3
+            PromptFrame.Parent = Page
+
+            local Label = Instance.new("TextLabel")
+            Label.Size = UDim2.new(0, 120, 1, 0)
+            Label.Position = UDim2.new(0, 5, 0, 0)
+            Label.BackgroundTransparency = 1
+            Label.Text = promptName
+            Label.TextColor3 = Theme.Text
+            Label.Font = Enum.Font.Gotham
+            Label.TextSize = 13
+            Label.TextXAlignment = Enum.TextXAlignment.Left
+            Label.ZIndex = 3
+            Label.Parent = PromptFrame
+
+            local TextBox = Instance.new("TextBox")
+            TextBox.Size = UDim2.new(0, 140, 0, 26)
+            TextBox.Position = UDim2.new(1, -145, 0.5, -13)
+            TextBox.BackgroundColor3 = Theme.BgColor
+            TextBox.BackgroundTransparency = 0.5
+            TextBox.Text = ""
+            TextBox.PlaceholderText = placeholder or "Enter text..."
+            TextBox.TextColor3 = Theme.Text
+            TextBox.PlaceholderColor3 = Theme.TextMuted
+            TextBox.Font = Enum.Font.Gotham
+            TextBox.TextSize = 11
+            TextBox.ClipsDescendants = true
+            TextBox.ZIndex = 3
+            TextBox.Parent = PromptFrame
+            addCorner(TextBox, 6)
+            local BoxStroke = addStroke(TextBox, Color3.fromRGB(255,255,255), 0.8)
+
+            -- Visual Feedbacks (Umiilaw kapag tinap o tinype ng user)
+            TextBox.Focused:Connect(function()
+                BoxStroke.Color = Theme.Accent
+                BoxStroke.Transparency = 0.3
+            end)
+
+            TextBox.FocusLost:Connect(function(enterPressed)
+                BoxStroke.Color = Color3.fromRGB(255,255,255)
+                BoxStroke.Transparency = 0.8
+                -- Tinatawag ang callback function kahit i-tap sa labas o pindutin ang enter
+                pcall(callback, TextBox.Text)
             end)
         end
 
